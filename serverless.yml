@@ -1,0 +1,55 @@
+service: guessing-game
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-north-1
+  environment:
+    BTC_API_URL: https://api.coindesk.com/v1/bpi/currentprice/BTC.json
+    DYNAMODB_TABLE: UserScores
+
+functions:
+  makeGuess:
+    handler: build/handler.makeGuess
+    events:
+      - http:
+          path: guess
+          method: post
+          cors: true
+
+  resolveGuess:
+    handler: build/handler.resolveGuess
+    events:
+      - http:
+          path: resolve
+          method: post
+          cors: true
+  
+  getUserScore:
+    handler: build/handler.getBettingStatus
+    events:
+      - http:
+          path: get-score/{username}
+          method: get
+          cors: true
+
+plugins:
+  - serverless-offline
+
+resources:
+  Resources:
+    UserScoresTable:  # Changed logical name to avoid potential conflicts
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: username
+            AttributeType: S
+        KeySchema:
+          - AttributeName: username
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+custom:
+  serverless-offline:
+    httpPort: 4000
